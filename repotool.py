@@ -57,8 +57,9 @@ class PkgInfo(NamedTuple):
     def from_file(cls, path):
         """Returns the package info from the given file path."""
         command = ('/usr/bin/pacman', '-Qp', str(path))
-        text = check_output(command, text=True)
-        return cls(text.split(maxsplit=1))
+        text = check_output(command, text=True).strip()
+        items = text.split(maxsplit=1)
+        return cls(*items)
 
 
 class Repository(NamedTuple):
