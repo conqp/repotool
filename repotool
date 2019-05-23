@@ -40,7 +40,7 @@ def main():
     for package in args.package:
         repository.add(package, sign=args.sign)
 
-    if args.sync:
+    if args.rsync:
         repository.rsync(target=args.target, delete=args.delete)
 
 
