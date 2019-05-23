@@ -90,7 +90,7 @@ class Repository(NamedTuple):
 
         return check_call(repoadd, cwd=self.basedir)
 
-    def rsync(self, target=None, *, delete=False):
+    def rsync(self, target=None, *, delete=None):
         """Synchronizes the repository to the target."""
         target = self.target if target is None else target
 
