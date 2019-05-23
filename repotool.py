@@ -98,7 +98,7 @@ class Repository(NamedTuple):
             return None
 
         delete = target.endswith('/') if delete is None else delete
-        command = ['/usr/bin/rsync']
+        command = ['/usr/bin/rsync', '-auv']
 
         if delete:
             command.append('--delete')
