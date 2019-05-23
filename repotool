@@ -3,11 +3,13 @@
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
+from logging import DEBUG, INFO, basicConfig
 from pathlib import Path
 from repotool import Repository
 
 
 DESCRIPTION = 'Manage Arch Linux packages and repositories.'
+LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 
 
 def get_args():
@@ -28,6 +30,9 @@ def get_args():
     parser.add_argument(
         '-d', '--delete', action='store_true',
         help='invoke rsync with delete flag')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='enable verbose logging')
     return parser.parse_args()
 
 
@@ -35,6 +40,7 @@ def main():
     """Main program."""
 
     args = get_args()
+    basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
     config = ConfigParser()
     config.read('/etc/repotool.conf')
     repository = Repository.from_config(args.repository, config[args.repository])

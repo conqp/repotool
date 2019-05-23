@@ -1,6 +1,7 @@
 """Manage Arch Linux repositories."""
 
 from contextlib import suppress
+from logging import getLogger
 from os import linesep
 from pathlib import Path
 from shutil import SameFileError, copy2
@@ -11,6 +12,7 @@ from typing import NamedTuple
 __all__ = ['pkgsig', 'signpkg', 'pkgpath', 'Repository']
 
 
+LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 
 
@@ -41,6 +43,24 @@ def pkgpath(pkgdir=None):
         yield Path(line)
 
 
+class PkgInfo(NamedTuple):
+    """Package meta information."""
+
+    pkgbase: str
+    version: str
+
+    def __str__(self):
+        """Returns the pacakge base and version."""
+        return f'{self.pkgbase} {self.version}'
+
+    @classmethod
+    def from_file(cls, path):
+        """Returns the package info from the given file path."""
+        command = ('/usr/bin/pacman', '-Qp', str(path))
+        text = check_output(command, text=True)
+        return cls(text.split(maxsplit=1))
+
+
 class Repository(NamedTuple):
     """Represents a repository."""
 
@@ -67,7 +87,7 @@ class Repository(NamedTuple):
         """Returns the path to the database file."""
         return self.basedir.joinpath(self.database)
 
-    def add(self, package, sign=None):
+    def add(self, package, *, sign=None, clean=False):
         """Adds the respective pacakge to the repo."""
         sign = self.sign if sign is None else sign
 
@@ -88,7 +108,29 @@ class Repository(NamedTuple):
         if sign:
             repoadd.append('--sign')
 
-        return check_call(repoadd, cwd=self.basedir)
+        check_call(repoadd, cwd=self.basedir)
+
+        if clean:
+            pkg_info = PkgInfo.from_file(package)
+            self.isolate(pkg_info)
+
+    def isolate(self, pkg_info):
+        """Cleans the respective package."""
+        for package in self.basedir.glob(f'{pkg_info.pkgbase}-*.pkg.tar.xz'):
+            current_pkg_info = PkgInfo.from_file(package)
+
+            if current_pkg_info == pkg_info:
+                LOGGER.debug('Keeping %s.', current_pkg_info)
+                continue
+
+            LOGGER.info('Deleting %s.', current_pkg_info)
+            package.unlink()
+            LOGGER.debug('Deleted %s.', package)
+            signature = pkgsig(package)
+
+            if signature.is_file():
+                signature.unlink()
+                LOGGER.debug('Deleted %s.', signature)
 
     def rsync(self, target=None, *, delete=False):
         """Synchronizes the repository to the target."""
