@@ -90,18 +90,19 @@ class Repository(NamedTuple):
 
         return check_call(repoadd, cwd=self.basedir)
 
-    def rsync(self, target=None, *, delete=None):
+    def rsync(self, target=None, *, delete=False):
         """Synchronizes the repository to the target."""
         target = self.target if target is None else target
 
         if target is None:
             return None
 
-        delete = target.endswith('/') if delete is None else delete
         command = ['/usr/bin/rsync', '-auv']
+        source = str(self.basedir)
 
         if delete:
             command.append('--delete')
+            source = source if source.endswith('/') else source + '/'
 
-        command += ['./', target]
+        command += [source, target]
         return check_call(command, cwd=self.basedir)
