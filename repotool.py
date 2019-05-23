@@ -30,7 +30,7 @@ def signpkg(package):
 
 
 def pkgpath(pkgdir=None):
-    """Returns the absolute path of the package to be built."""
+    """Yields the paths of the packages to be built."""
 
     if pkgdir is None:
         text = check_output(PACKAGELIST, text=True)
