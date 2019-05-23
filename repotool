@@ -3,7 +3,7 @@
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
-from pathllib import Path
+from pathlib import Path
 from repotool import Repository
 
 
@@ -35,7 +35,7 @@ def main():
     args = get_args()
     config = ConfigParser()
     config.read('/etc/repotool.conf')
-    repository = Repository.from_config(config[args.repository])
+    repository = Repository.from_config(args.repository, config[args.repository])
 
     for package in args.package:
         repository.add(package, sign=args.sign)
