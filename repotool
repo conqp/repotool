@@ -25,7 +25,9 @@ def get_args():
         '-r', '--rsync', action='store_true',
         help='rsync the repository to the configured location')
     parser.add_argument('-t', '--target', help='the rsync target')
-    parser.add_argument('-d', '--delete', help='invoke rsync with delete flag')
+    parser.add_argument(
+        '-d', '--delete', action='store_true',
+        help='invoke rsync with delete flag')
     return parser.parse_args()
 
 
