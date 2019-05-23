@@ -111,8 +111,7 @@ class Repository(NamedTuple):
         check_call(repoadd, cwd=self.basedir)
 
         if clean:
-            pkg_info = PkgInfo.from_file(package)
-            self.isolate(pkg_info)
+            self.isolate(PkgInfo.from_file(package))
 
     def isolate(self, pkg_info):
         """Cleans the respective package."""

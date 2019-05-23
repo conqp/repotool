@@ -21,6 +21,9 @@ def get_args():
         'package', type=Path, nargs='+',
         help='the packages to add to the respository')
     parser.add_argument(
+        '-c', '--clean', action='store_true',
+        help='remove older versions of the package from the repo')
+    parser.add_argument(
         '-s', '--sign', action='store_true',
         help='sign the packages and repository')
     parser.add_argument(
@@ -46,7 +49,7 @@ def main():
     repository = Repository.from_config(args.repository, config[args.repository])
 
     for package in args.package:
-        repository.add(package, sign=args.sign)
+        repository.add(package, sign=args.sign, clean=args.clean)
 
     if args.rsync:
         repository.rsync(target=args.target, delete=args.delete)
