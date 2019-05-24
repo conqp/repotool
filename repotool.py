@@ -115,7 +115,7 @@ class Repository(NamedTuple):
             self.isolate(PkgInfo.from_file(package))
 
     def isolate(self, pkg_info):
-        """Cleans the respective package."""
+        """Removes other versions of the given package."""
         for package in self.basedir.glob(f'{pkg_info.pkgbase}-*.pkg.tar.xz'):
             current_pkg_info = PkgInfo.from_file(package)
 
