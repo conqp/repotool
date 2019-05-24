@@ -88,6 +88,16 @@ class Repository(NamedTuple):
         """Returns the path to the database file."""
         return self.basedir.joinpath(self.database)
 
+    @property
+    def packages(self):
+        """Yields packages in the repository."""
+        return self.basedir.glob('*.pkg.tar.xz')
+
+    @property
+    def pkgbases(self):
+        """Yields distinct package names."""
+        return {PkgInfo.from_file(pkg).pkgbase for pkg in self.packages}
+
     def add(self, package, *, sign=None, clean=False):
         """Adds the respective pacakge to the repo."""
         sign = self.sign if sign is None else sign
