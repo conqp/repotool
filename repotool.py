@@ -25,8 +25,7 @@ def pkgsig(package):
 def signpkg(package):
     """Signs the respective pacakge."""
 
-    signature = pkgsig(package)
-    command = ('/usr/bin/gpg', '--output', str(signature),
+    command = ('/usr/bin/gpg', '--output', str(pkgsig(package)),
                '--detach-sign', str(package))
     return check_call(command)
 
