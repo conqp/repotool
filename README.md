@@ -32,5 +32,5 @@ An Arch Linux repository management tool
     target = user@my.server.com:/path/to/remote/repo
 
 `basedir` specifies the local build repository's base directory.  
-`sign` specifies the default signing policy and is optional.
+`sign` specifies the default signing policy and is optional.  
 `target` is the remote repository which will be rsync'ed to iff `-s` was specified and is optional.
