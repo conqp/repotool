@@ -5,7 +5,7 @@ from logging import getLogger
 from os import linesep
 from pathlib import Path
 from shutil import SameFileError, copy2
-from subprocess import check_call, check_output, run
+from subprocess import check_call, check_output
 from typing import NamedTuple
 
 
@@ -42,7 +42,7 @@ def pkgpath(pkgdir=None):
 def vercmp(version, other):
     """Compares package versions."""
 
-    return run(('/usr/bin/vercmp', version, other)).returncode
+    return int(check_output(('/usr/bin/vercmp', version, other), text=True))
 
 
 class PackageVersion(str):
