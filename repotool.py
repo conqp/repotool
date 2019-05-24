@@ -5,7 +5,7 @@ from logging import getLogger
 from os import linesep
 from pathlib import Path
 from shutil import SameFileError, copy2
-from subprocess import check_call, check_output
+from subprocess import check_call, check_output, run
 from typing import NamedTuple
 
 
@@ -25,24 +25,43 @@ def pkgsig(package):
 def signpkg(package):
     """Signs the respective pacakge."""
 
-    command = ('/usr/bin/gpg', '--output', str(pkgsig(package)),
-               '--detach-sign', str(package))
-    return check_call(command)
+    return check_call(
+        ('/usr/bin/gpg', '--output', str(pkgsig(package)), '--detach-sign',
+         str(package)))
 
 
 def pkgpath(pkgdir=None):
     """Yields the paths of the packages to be built."""
 
-    if pkgdir is None:
-        text = check_output(PACKAGELIST, text=True)
-    else:
-        text = check_output(PACKAGELIST, text=True, cwd=pkgdir)
+    text = check_output(PACKAGELIST, text=True, cwd=pkgdir)
 
     for line in text.split(linesep):
         yield Path(line)
 
 
-class PkgInfo(NamedTuple):
+def vercmp(version, other):
+    """Compares package versions."""
+
+    return run(('/usr/bin/vercmp', version, other)).returncode
+
+
+class PackageVersion(str):
+    """A package version string."""
+
+    def __eq__(self, other):
+        """Cehcks if package versions are equal."""
+        return vercmp(self, other) == 0
+
+    def __gt__(self, other):
+        """Cehcks if this package version is greater than the other."""
+        return vercmp(self, other) > 0
+
+    def __lt__(self, other):
+        """Cehcks if this package version is lesser than the other."""
+        return vercmp(self, other) < 0
+
+
+class PackageInfo(NamedTuple):
     """Package meta information."""
 
     pkgbase: str
@@ -57,8 +76,8 @@ class PkgInfo(NamedTuple):
         """Returns the package info from the given file path."""
         command = ('/usr/bin/pacman', '-Qp', str(path))
         text = check_output(command, text=True).strip()
-        items = text.split(maxsplit=1)
-        return cls(*items)
+        pkgbase, version = text.split(maxsplit=1)
+        return cls(pkgbase, PackageVersion(version))
 
 
 class Repository(NamedTuple):
@@ -95,7 +114,7 @@ class Repository(NamedTuple):
     @property
     def pkgbases(self):
         """Yields distinct package names."""
-        return {PkgInfo.from_file(pkg).pkgbase for pkg in self.packages}
+        return {PackageInfo.from_file(pkg).pkgbase for pkg in self.packages}
 
     def _copy_pkg(self, package, sign):
         """Copies the package to the repository's base dir."""
@@ -113,20 +132,18 @@ class Repository(NamedTuple):
     def isolate(self, pkg_info):
         """Removes other versions of the given package."""
         for package in self.basedir.glob(f'{pkg_info.pkgbase}-*.pkg.tar.xz'):
-            current_pkg_info = PkgInfo.from_file(package)
+            current_pkg_info = PackageInfo.from_file(package)
 
-            if current_pkg_info == pkg_info:
+            if current_pkg_info.version < pkg_info.version:
+                LOGGER.info('Deleting %s.', current_pkg_info)
+                package.unlink()
+                signature = pkgsig(package)
+
+                if signature.is_file():
+                    signature.unlink()
+                    LOGGER.debug('Deleted %s.', signature)
+            else:
                 LOGGER.debug('Keeping %s.', current_pkg_info)
-                continue
-
-            LOGGER.info('Deleting %s.', current_pkg_info)
-            package.unlink()
-            LOGGER.debug('Deleted %s.', package)
-            signature = pkgsig(package)
-
-            if signature.is_file():
-                signature.unlink()
-                LOGGER.debug('Deleted %s.', signature)
 
     def add(self, package, *, sign=None, clean=False):
         """Adds the respective pacakge to the repo."""
@@ -141,7 +158,7 @@ class Repository(NamedTuple):
         check_call(repoadd, cwd=self.basedir)
 
         if clean:
-            self.isolate(PkgInfo.from_file(package))
+            self.isolate(PackageInfo.from_file(package))
 
     def rsync(self, target=None, *, delete=False):
         """Synchronizes the repository to the target."""
