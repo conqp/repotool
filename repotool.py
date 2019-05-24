@@ -98,31 +98,18 @@ class Repository(NamedTuple):
         """Yields distinct package names."""
         return {PkgInfo.from_file(pkg).pkgbase for pkg in self.packages}
 
-    def add(self, package, *, sign=None, clean=False):
-        """Adds the respective pacakge to the repo."""
-        sign = self.sign if sign is None else sign
-
-        if sign and not pkgsig(package).is_file():
-            signpkg(package)
-
-        with suppress(SameFileError):
-            copy2(package, self.basedir)
-
+    def _copy_pkg(self, package, sign):
+        """Copies the package to the repository's base dir."""
         signature = pkgsig(package)
 
-        if signature.is_file():
+        if sign and not signature.is_file():
+            signpkg(package)
+
             with suppress(SameFileError):
                 copy2(signature, self.basedir)
 
-        repoadd = ['/usr/bin/repo-add', self.database, package.name]
-
-        if sign:
-            repoadd.append('--sign')
-
-        check_call(repoadd, cwd=self.basedir)
-
-        if clean:
-            self.isolate(PkgInfo.from_file(package))
+        with suppress(SameFileError):
+            copy2(package, self.basedir)
 
     def isolate(self, pkg_info):
         """Removes other versions of the given package."""
@@ -141,6 +128,21 @@ class Repository(NamedTuple):
             if signature.is_file():
                 signature.unlink()
                 LOGGER.debug('Deleted %s.', signature)
+
+    def add(self, package, *, sign=None, clean=False):
+        """Adds the respective pacakge to the repo."""
+        sign = self.sign if sign is None else sign
+        self._copy_pkg(package, sign)
+
+        repoadd = ['/usr/bin/repo-add', self.database, package.name]
+
+        if sign:
+            repoadd.append('--sign')
+
+        check_call(repoadd, cwd=self.basedir)
+
+        if clean:
+            self.isolate(PkgInfo.from_file(package))
 
     def rsync(self, target=None, *, delete=False):
         """Synchronizes the repository to the target."""
