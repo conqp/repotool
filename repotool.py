@@ -9,7 +9,13 @@ from subprocess import check_call, check_output
 from typing import NamedTuple
 
 
-__all__ = ['pkgsig', 'signpkg', 'pkgpath', 'Repository']
+__all__ = [
+    'pkgsig',
+    'signpkg',
+    'pkgpath',
+    'vercmp',
+    'PackageInfo',
+    'Repository']
 
 
 LOGGER = getLogger(__file__)
@@ -45,22 +51,6 @@ def vercmp(version, other):
     return int(check_output(('/usr/bin/vercmp', version, other), text=True))
 
 
-class PackageVersion(str):
-    """A package version string."""
-
-    def __eq__(self, other):
-        """Cehcks if package versions are equal."""
-        return vercmp(self, other) == 0
-
-    def __gt__(self, other):
-        """Cehcks if this package version is greater than the other."""
-        return vercmp(self, other) > 0
-
-    def __lt__(self, other):
-        """Cehcks if this package version is lesser than the other."""
-        return vercmp(self, other) < 0
-
-
 class PackageInfo(NamedTuple):
     """Package meta information."""
 
@@ -77,7 +67,7 @@ class PackageInfo(NamedTuple):
         command = ('/usr/bin/pacman', '-Qp', str(path))
         text = check_output(command, text=True).strip()
         pkgbase, version = text.split(maxsplit=1)
-        return cls(pkgbase, PackageVersion(version))
+        return cls(pkgbase, version)
 
 
 class Repository(NamedTuple):
@@ -85,6 +75,8 @@ class Repository(NamedTuple):
 
     name: str
     basedir: Path
+    dbext: str
+    pkgext: str
     sign: bool
     target: str
 
@@ -92,14 +84,16 @@ class Repository(NamedTuple):
     def from_config(cls, name, config):
         """Returns the repository from the given name and configuration."""
         basedir = Path(config['basedir'])
+        dbext = config.get('dbext', '.db.tar.xz')
+        pkgext = config.get('pkgext', '.pkg.tar.xz')
         sign = config.getboolean('sign')
         target = config.get('target')
-        return cls(name, basedir, sign, target)
+        return cls(name, basedir, dbext, pkgext, sign, target)
 
     @property
     def database(self):
         """Returns the database file name."""
-        return self.name + '.db.tar.xz'
+        return self.name + self.dbext
 
     @property
     def dbpath(self):
@@ -109,7 +103,7 @@ class Repository(NamedTuple):
     @property
     def packages(self):
         """Yields packages in the repository."""
-        return self.basedir.glob('*.pkg.tar.xz')
+        return self.basedir.glob(f'*{self.pkgext}')
 
     @property
     def pkgbases(self):
@@ -120,21 +114,24 @@ class Repository(NamedTuple):
         """Copies the package to the repository's base dir."""
         signature = pkgsig(package)
 
-        if sign and not signature.is_file():
-            signpkg(package)
-
-            with suppress(SameFileError):
-                copy2(signature, self.basedir)
+        if sign:
+            if signature.is_file():
+                LOGGER.warning('Package is already signed.')
+            else:
+                signpkg(package)
 
         with suppress(SameFileError):
             copy2(package, self.basedir)
 
+        with suppress(SameFileError):
+            copy2(signature, self.basedir)
+
     def isolate(self, pkg_info):
         """Removes other versions of the given package."""
-        for package in self.basedir.glob(f'{pkg_info.pkgbase}-*.pkg.tar.xz'):
+        for package in self.basedir.glob(f'{pkg_info.pkgbase}-*{self.pkgext}'):
             current_pkg_info = PackageInfo.from_file(package)
 
-            if current_pkg_info.version < pkg_info.version:
+            if current_pkg_info != pkg_info:
                 LOGGER.info('Deleting %s.', current_pkg_info)
                 package.unlink()
                 signature = pkgsig(package)

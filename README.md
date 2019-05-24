@@ -30,7 +30,11 @@ An Arch Linux repository management tool
     basedir = /srv/my_repo
     sign = true
     target = user@my.server.com:/path/to/remote/repo
+    dbext = .db.tar.xz
+    pkgext = .pkg.tar.xz
 
 `basedir` specifies the local build repository's base directory.  
 `sign` specifies the default signing policy and is optional.  
-`target` is the remote repository which will be rsync'ed to iff `-s` was specified and is optional.
+`target` is the remote repository which will be rsync'ed to iff `-s` was specified and is optional.  
+`dbext` is the database file extension. This is optional and defaults to `.db.tar.xz`.  
+`pkgext` is the package files' extension. This is optional and defaults to `.pkg.tar.xz`.
