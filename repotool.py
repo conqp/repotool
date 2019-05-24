@@ -162,7 +162,8 @@ class Repository(NamedTuple):
         target = self.target if target is None else target
 
         if target is None:
-            return None
+            LOGGER.error('No target specified.')
+            return False
 
         command = ['/usr/bin/rsync', '-auv']
         source = str(self.basedir)
