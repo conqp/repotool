@@ -117,8 +117,8 @@ class Repository(NamedTuple):
         if sign:
             if signature.is_file():
                 LOGGER.warning('Package is already signed.')
-            else:
-                signpkg(package)
+
+            signpkg(package)
 
         with suppress(SameFileError):
             copy2(package, self.basedir)
