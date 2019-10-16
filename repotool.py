@@ -15,11 +15,14 @@ __all__ = [
     'pkgpath',
     'vercmp',
     'PackageInfo',
-    'Repository']
+    'Repository'
+]
 
 
 LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
+PKG_GLOB = '*.pkg.tar*'
+PKG_REGEX = compile('^(.*)\\.pkg\\.tar(\\.[a-z]{2,3})?$')
 
 
 def pkgsig(package):
@@ -76,7 +79,6 @@ class Repository(NamedTuple):
     name: str
     basedir: Path
     dbext: str
-    pkgext: str
     sign: bool
     target: str
 
@@ -84,11 +86,10 @@ class Repository(NamedTuple):
     def from_config(cls, name, config):
         """Returns the repository from the given name and configuration."""
         basedir = Path(config['basedir'])
-        dbext = config.get('dbext', '.db.tar.xz')
-        pkgext = config.get('pkgext', '.pkg.tar.xz')
+        dbext = config.get('dbext', '.db.tar.zst')
         sign = config.getboolean('sign')
         target = config.get('target')
-        return cls(name, basedir, dbext, pkgext, sign, target)
+        return cls(name, basedir, dbext, sign, target)
 
     @property
     def database(self):
@@ -103,7 +104,9 @@ class Repository(NamedTuple):
     @property
     def packages(self):
         """Yields packages in the repository."""
-        return self.basedir.glob(f'*{self.pkgext}')
+        for candidate in self.basedir.glob(PKG_GLOB):
+            if PKG_REGEX.fullmatch(str(candidate)) is not None:
+                yield candidate
 
     @property
     def pkgbases(self):
@@ -126,9 +129,15 @@ class Repository(NamedTuple):
         with suppress(SameFileError):
             copy2(signature, self.basedir)
 
+    def _package_files(self, pkgbase):
+        """Yields package files with the respective package information."""
+        for candidate in self.basedir.glob(f'{pkgbase}-*{PKG_GLOB}'):
+            if PKG_REGEX.fullmatch(str(candidate)) is not None:
+                yield candidate
+
     def isolate(self, pkg_info):
         """Removes other versions of the given package."""
-        for package in self.basedir.glob(f'{pkg_info.pkgbase}-*{self.pkgext}'):
+        for package in self._package_files(pkg_info.pkgbase):
             current_pkg_info = PackageInfo.from_file(package)
 
             if current_pkg_info != pkg_info:
