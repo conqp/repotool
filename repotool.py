@@ -22,7 +22,7 @@ __all__ = [
 LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
-PKG_REGEX = compile('^(.*)\\.pkg\\.tar(\\.[a-z]{2,3})?$')
+PKG_REGEX = compile('^.*\\.pkg\\.tar(\\.[a-z]{2,3})?$')
 
 
 def pkgsig(package):
@@ -102,16 +102,22 @@ class Repository(NamedTuple):
         return self.basedir.joinpath(self.database)
 
     @property
-    def packages(self):
+    def package_files(self):
         """Yields packages in the repository."""
         for candidate in self.basedir.glob(PKG_GLOB):
             if PKG_REGEX.fullmatch(str(candidate)) is not None:
                 yield candidate
 
     @property
+    def packages(self):
+        """Yields the respective packages' package information."""
+        for path in self.package_files:
+            yield PackageInfo.from_file(path)
+
+    @property
     def pkgbases(self):
         """Yields distinct package names."""
-        return {PackageInfo.from_file(pkg).pkgbase for pkg in self.packages}
+        return {pkg_info.pkgbase for pkg_info in self.packages}
 
     def _copy_pkg(self, package, sign):
         """Copies the package to the repository's base dir."""
@@ -129,7 +135,7 @@ class Repository(NamedTuple):
         with suppress(SameFileError):
             copy2(signature, self.basedir)
 
-    def _package_files(self, pkgbase):
+    def _package_files_for_base(self, pkgbase):
         """Yields package files with the respective package information."""
         for candidate in self.basedir.glob(f'{pkgbase}-*{PKG_GLOB}'):
             if PKG_REGEX.fullmatch(str(candidate)) is not None:
@@ -137,7 +143,7 @@ class Repository(NamedTuple):
 
     def isolate(self, pkg_info):
         """Removes other versions of the given package."""
-        for package in self._package_files(pkg_info.pkgbase):
+        for package in self._package_files_for_base(pkg_info.pkgbase):
             current_pkg_info = PackageInfo.from_file(package)
 
             if current_pkg_info != pkg_info:
