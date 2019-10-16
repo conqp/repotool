@@ -4,6 +4,7 @@ from contextlib import suppress
 from logging import getLogger
 from os import linesep
 from pathlib import Path
+from re import compile  # pylint: disable=W0622
 from shutil import SameFileError, copy2
 from subprocess import check_call, check_output
 from typing import NamedTuple
