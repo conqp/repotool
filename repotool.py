@@ -138,7 +138,7 @@ class Repository(NamedTuple):
 
     def _package_files_for_base(self, pkgbase):
         """Yields package files with the respective package information."""
-        for candidate in self.basedir.glob(f'{pkgbase}-*{PKG_GLOB}'):
+        for candidate in self.basedir.glob(f'{pkgbase}-{PKG_GLOB}'):
             if PKG_REGEX.fullmatch(str(candidate)) is not None:
                 yield candidate
 
