@@ -23,7 +23,7 @@ __all__ = [
 LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
-PKG_REGEX = compile('^.*\\.pkg\\.tar(\\.[a-z]{2,3})?$')
+PKG_REGEX = compile('^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$')
 
 
 def pkgsig(package):
