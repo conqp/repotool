@@ -201,8 +201,8 @@ class Repository(NamedTuple):
         for other_package in self.packages_for_base(package.pkgbase):
             if package.is_same_as(other_package):
                 LOGGER.info('Deleting %s.', other_package)
-                package.unlink()
-                signature = pkgsig(package)
+                other_package.unlink()
+                signature = pkgsig(other_package)
 
                 if signature.is_file():
                     signature.unlink()
