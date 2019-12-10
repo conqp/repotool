@@ -12,7 +12,6 @@ from typing import NamedTuple
 
 
 __all__ = [
-    'NotAPackage',
     'pkgsig',
     'signpkg',
     'pkgpath',
@@ -27,10 +26,6 @@ LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
 PKG_REGEX = compile('^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$')
-
-
-class NotAPackage(Exception):
-    """Indicates that the respective path is not a package."""
 
 
 def pkgsig(package):
@@ -63,12 +58,7 @@ def is_package(string):
     if not isinstance(string, str):
         return is_package(str(string))
 
-    match = PKG_REGEX.fullmatch(string)
-
-    if match is None:
-        raise NotAPackage()
-
-    return match
+    return PKG_REGEX.fullmatch(string)
 
 
 @lru_cache()
