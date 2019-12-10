@@ -88,6 +88,9 @@ def get_arch_and_compression(path):
 class Version(str):
     """A package version."""
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __eq__(self, other):
         return vercmp(self, other) == 0
 
