@@ -1,9 +1,10 @@
 """Manage Arch Linux repositories."""
 
 from contextlib import suppress
+from functools import lru_cache
 from logging import getLogger
 from os import linesep
-from pathlib import Path
+from pathlib import Path, PosixPath
 from re import compile  # pylint: disable=W0622
 from shutil import SameFileError, copy2
 from subprocess import check_call, check_output
@@ -11,11 +12,13 @@ from typing import NamedTuple
 
 
 __all__ = [
+    'NotAPackage',
     'pkgsig',
     'signpkg',
     'pkgpath',
     'vercmp',
-    'PackageInfo',
+    'Version',
+    'Package',
     'Repository'
 ]
 
@@ -24,6 +27,10 @@ LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
 PKG_REGEX = compile('^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$')
+
+
+class NotAPackage(Exception):
+    """Indicates that the respective path is not a package."""
 
 
 def pkgsig(package):
@@ -49,29 +56,79 @@ def pkgpath(pkgdir=None):
         yield Path(line)
 
 
+@lru_cache()
 def vercmp(version, other):
     """Compares package versions."""
 
     return int(check_output(('/usr/bin/vercmp', version, other), text=True))
 
 
-class PackageInfo(NamedTuple):
+@lru_cache()
+def get_pkgbase_and_version(path):
+    """Returns the pkgbase and version from the given file path."""
+
+    command = ('/usr/bin/pacman', '-Qp', str(path))
+    text = check_output(command, text=True).strip()
+    pkgbase, version = text.split(maxsplit=1)
+    return (pkgbase, Version(version))
+
+
+@lru_cache()
+def get_arch_and_compression(path):
+    """Returns the architecture and file compression."""
+
+    match = PKG_REGEX.fullmatch(str(path))
+
+    if match is None:
+        raise NotAPackage()
+
+    return match.groups()
+
+
+class Version(str):
+    """A package version."""
+
+    def __eq__(self, other):
+        return vercmp(self, other) == 0
+
+    def __gt__(self, other):
+        return vercmp(self, other) == 1
+
+    def __lt__(self, other):
+        return vercmp(self, other) == -1
+
+
+class Package(PosixPath):
     """Package meta information."""
 
-    pkgbase: str
-    version: str
-
-    def __str__(self):
+    @property
+    def info(self):
         """Returns the pacakge base and version."""
         return f'{self.pkgbase} {self.version}'
 
-    @classmethod
-    def from_file(cls, path):
-        """Returns the package info from the given file path."""
-        command = ('/usr/bin/pacman', '-Qp', str(path))
-        text = check_output(command, text=True).strip()
-        pkgbase, version = text.split(maxsplit=1)
-        return cls(pkgbase, version)
+    @property
+    def pkgbase(self):
+        """Returns the pkgbase."""
+        return get_pkgbase_and_version(self)[0]
+
+    @property
+    def version(self):
+        """Returns the package version."""
+        return get_pkgbase_and_version(self)[1]
+
+    @property
+    def arch(self):
+        """Returns the package architecture."""
+        return get_arch_and_compression(self)[0]
+
+    @property
+    def compression(self):
+        """Returns the package compression."""
+        return get_arch_and_compression(self)[1]
+
+    def is_same_as(self, other):
+        """Checks if package base and version match the other package."""
+        return self.pkgbase == other.pkgbase and self.version == other.version
 
 
 class Repository(NamedTuple):
@@ -103,17 +160,11 @@ class Repository(NamedTuple):
         return self.basedir.joinpath(self.database)
 
     @property
-    def package_files(self):
+    def packages(self):
         """Yields packages in the repository."""
         for candidate in self.basedir.glob(PKG_GLOB):
             if PKG_REGEX.fullmatch(str(candidate)) is not None:
-                yield candidate
-
-    @property
-    def packages(self):
-        """Yields the respective packages' package information."""
-        for path in self.package_files:
-            yield PackageInfo.from_file(path)
+                yield Package(candidate)
 
     @property
     def pkgbases(self):
@@ -136,19 +187,17 @@ class Repository(NamedTuple):
         with suppress(SameFileError):
             copy2(signature, self.basedir)
 
-    def _package_files_for_base(self, pkgbase):
+    def packages_for_base(self, pkgbase):
         """Yields package files with the respective package information."""
         for candidate in self.basedir.glob(f'{pkgbase}-{PKG_GLOB}'):
             if PKG_REGEX.fullmatch(str(candidate)) is not None:
-                yield candidate
+                yield Package(candidate)
 
-    def isolate(self, pkg_info):
+    def isolate(self, package):
         """Removes other versions of the given package."""
-        for package in self._package_files_for_base(pkg_info.pkgbase):
-            current_pkg_info = PackageInfo.from_file(package)
-
-            if current_pkg_info != pkg_info:
-                LOGGER.info('Deleting %s.', current_pkg_info)
+        for other_package in self.packages_for_base(package.pkgbase):
+            if package.is_same_as(other_package):
+                LOGGER.info('Deleting %s.', other_package)
                 package.unlink()
                 signature = pkgsig(package)
 
@@ -156,7 +205,7 @@ class Repository(NamedTuple):
                     signature.unlink()
                     LOGGER.debug('Deleted %s.', signature)
             else:
-                LOGGER.debug('Keeping %s.', current_pkg_info)
+                LOGGER.debug('Keeping %s.', other_package)
 
     def add(self, package, *, sign=None, clean=False):
         """Adds the respective pacakge to the repo."""
@@ -171,7 +220,7 @@ class Repository(NamedTuple):
         check_call(repoadd, cwd=self.basedir)
 
         if clean:
-            self.isolate(PackageInfo.from_file(package))
+            self.isolate(package)
 
     def rsync(self, target=None, *, delete=False):
         """Synchronizes the repository to the target."""
