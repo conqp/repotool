@@ -57,6 +57,21 @@ def pkgpath(pkgdir=None):
 
 
 @lru_cache()
+def is_package(string):
+    """Checks whether the path is a package."""
+
+    if not isinstance(string, str):
+        return is_package(str(string))
+
+    match = PKG_REGEX.fullmatch(string)
+
+    if match is None:
+        raise NotAPackage()
+
+    return match
+
+
+@lru_cache()
 def vercmp(version, other):
     """Compares package versions."""
 
@@ -77,12 +92,7 @@ def get_pkgbase_and_version(path):
 def get_arch_and_compression(path):
     """Returns the architecture and file compression."""
 
-    match = PKG_REGEX.fullmatch(str(path))
-
-    if match is None:
-        raise NotAPackage()
-
-    return match.groups()
+    return is_package(path).groups()
 
 
 class Version(str):
@@ -165,9 +175,9 @@ class Repository(NamedTuple):
     @property
     def packages(self):
         """Yields packages in the repository."""
-        for candidate in self.basedir.glob(PKG_GLOB):
-            if PKG_REGEX.fullmatch(str(candidate)) is not None:
-                yield Package(candidate)
+        for path in self.basedir.glob(PKG_GLOB):
+            if is_package(path) is not None:
+                yield Package(path)
 
     @property
     def pkgbases(self):
@@ -192,9 +202,9 @@ class Repository(NamedTuple):
 
     def packages_for_base(self, pkgbase):
         """Yields package files with the respective package information."""
-        for candidate in self.basedir.glob(f'{pkgbase}-{PKG_GLOB}'):
-            if PKG_REGEX.fullmatch(str(candidate)) is not None:
-                yield Package(candidate)
+        for path in self.basedir.glob(f'{pkgbase}-{PKG_GLOB}'):
+            if is_package(path) is not None:
+                yield Package(path)
 
     def isolate(self, package):
         """Removes other versions of the given package."""
