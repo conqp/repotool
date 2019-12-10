@@ -58,7 +58,7 @@ def pkgpath(pkgdir=None):
 
 @lru_cache()
 def is_package(string):
-    """Checks whether the path is a package."""
+    """Checks whether the path is a package and returns a regex match."""
 
     if not isinstance(string, str):
         return is_package(str(string))
