@@ -4,7 +4,9 @@
 from argparse import ArgumentParser
 from configparser import ConfigParser
 from logging import DEBUG, INFO, basicConfig
-from repotool import Package, Repository
+from sys import exit    # pylint: disable=W0622
+
+from repotool import LOGGER, Package, Repository
 
 
 DESCRIPTION = 'Manage Arch Linux packages and repositories.'
@@ -47,12 +49,25 @@ def main():
     config.read('/etc/repotool.conf')
     repo_config = config[args.repository]
     repository = Repository.from_config(args.repository, repo_config)
+    exit_code = 0
 
     for package in args.package:
-        repository.add(package, sign=args.sign, clean=args.clean)
+        try:
+            repository.add(package, sign=args.sign, clean=args.clean)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Skipped adding package %s.', package)
+            exit_code += 1
 
     if args.rsync:
-        repository.rsync(target=args.target, delete=args.delete)
+        try:
+            repository.rsync(target=args.target, delete=args.delete)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Synchronization aborted by user.')
+            exit_code += 1
+
+    exit(exit_code)
 
 
 if __name__ == '__main__':

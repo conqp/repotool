@@ -12,6 +12,7 @@ from typing import NamedTuple
 
 
 __all__ = [
+    'LOGGER',
     'pkgsig',
     'signpkg',
     'pkgpath',
