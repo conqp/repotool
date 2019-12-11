@@ -89,16 +89,16 @@ class Version(str):
     """A package version."""
 
     def __hash__(self):
-        return hash(str(self))
+        return hash((type(self), str(self)))
 
     def __eq__(self, other):
-        return vercmp(self, other) == 0
+        return vercmp(str(self), str(other)) == 0
 
     def __gt__(self, other):
-        return vercmp(self, other) == 1
+        return vercmp(str(self), str(other)) == 1
 
     def __lt__(self, other):
-        return vercmp(self, other) == -1
+        return vercmp(str(self), str(other)) == -1
 
 
 class Package(PosixPath):
