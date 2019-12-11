@@ -130,9 +130,9 @@ class Package(PosixPath):
         """Returns the package compression."""
         return get_arch_and_compression(self)[1]
 
-    def is_same_as(self, other):
+    def is_other_version_of(self, other):
         """Checks if package base and version match the other package."""
-        return self.pkgbase == other.pkgbase and self.version == other.version
+        return self.pkgbase == other.pkgbase and self.version != other.version
 
 
 class Repository(NamedTuple):
@@ -200,7 +200,7 @@ class Repository(NamedTuple):
     def isolate(self, package):
         """Removes other versions of the given package."""
         for other_package in self.packages_for_base(package.pkgbase):
-            if package.is_same_as(other_package):
+            if other_package.is_other_version_of(package):
                 LOGGER.info('Deleting %s.', other_package)
                 other_package.unlink()
                 signature = pkgsig(other_package)
