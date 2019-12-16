@@ -159,11 +159,6 @@ class Repository(NamedTuple):
         return self.name + self.dbext
 
     @property
-    def dbpath(self):
-        """Returns the path to the database file."""
-        return self.basedir.joinpath(self.database)
-
-    @property
     def packages(self):
         """Yields packages in the repository."""
         for path in self.basedir.glob(PKG_GLOB):
