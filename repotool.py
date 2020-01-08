@@ -208,7 +208,7 @@ class Repository(NamedTuple):
 
     def add(self, package, *, sign=None, clean=False):
         """Adds the respective pacakge to the repo."""
-        sign = self.sign if sign is None else sign
+        sign = sign or self.sign
         self._copy_pkg(package, sign)
 
         repoadd = ['/usr/bin/repo-add', self.database, package.name]
