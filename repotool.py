@@ -131,8 +131,17 @@ class Package(PosixPath):
         return get_arch_and_compression(self)[1]
 
     def is_other_version_of(self, other):
-        """Checks if package base and version match the other package."""
-        return self.pkgbase == other.pkgbase and self.version != other.version
+        """Checks if the other package is considered
+        another version of this pacakge.
+        """
+        if self.pkgbase == other.pkgbase:
+            if self.version != other.version:
+                return True
+
+            if self.compression != other.compression:
+                return True
+
+        return False
 
 
 class Repository(NamedTuple):
