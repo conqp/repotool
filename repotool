@@ -52,7 +52,7 @@ def main():
 
     if not args.package:
         for package in repository.packages:
-            print(package)
+            print(*package)
 
         exit(0)
 

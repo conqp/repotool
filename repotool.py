@@ -105,6 +105,13 @@ class Version(str):
 class Package(PosixPath):
     """Package meta information."""
 
+    def __iter__(self):
+        """Yields the package's properties."""
+        yield self.pkgbase
+        yield self.version
+        yield self.arch
+        yield self.compression
+
     @property
     def info(self):
         """Returns the pacakge base and version."""
