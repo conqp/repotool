@@ -19,7 +19,7 @@ def get_args():
     parser = ArgumentParser(description=DESCRIPTION)
     parser.add_argument('repository', help='the target repository')
     parser.add_argument(
-        'package', type=Package, nargs='+',
+        'package', type=Package, nargs='*',
         help='the packages to add to the respository')
     parser.add_argument(
         '-c', '--clean', action='store_true',
@@ -51,21 +51,25 @@ def main():
     repository = Repository.from_config(args.repository, repo_config)
     exit_code = 0
 
-    for package in args.package:
-        try:
-            repository.add(package, sign=args.sign, clean=args.clean)
-        except KeyboardInterrupt:
-            print()
-            LOGGER.warning('Skipped adding package %s.', package)
-            exit_code += 1
+    if args.package:
+        for package in args.package:
+            try:
+                repository.add(package, sign=args.sign, clean=args.clean)
+            except KeyboardInterrupt:
+                print()
+                LOGGER.warning('Skipped adding package %s.', package)
+                exit_code += 1
 
-    if args.rsync:
-        try:
-            repository.rsync(target=args.target, delete=args.delete)
-        except KeyboardInterrupt:
-            print()
-            LOGGER.warning('Synchronization aborted by user.')
-            exit_code += 1
+        if args.rsync:
+            try:
+                repository.rsync(target=args.target, delete=args.delete)
+            except KeyboardInterrupt:
+                print()
+                LOGGER.warning('Synchronization aborted by user.')
+                exit_code += 1
+    else:
+        for package in repository.packages:
+            print(package)
 
     exit(exit_code)
 
