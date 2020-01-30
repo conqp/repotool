@@ -49,27 +49,30 @@ def main():
     config.read('/etc/repotool.conf')
     repo_config = config[args.repository]
     repository = Repository.from_config(args.repository, repo_config)
-    exit_code = 0
 
-    if args.package:
-        for package in args.package:
-            try:
-                repository.add(package, sign=args.sign, clean=args.clean)
-            except KeyboardInterrupt:
-                print()
-                LOGGER.warning('Skipped adding package %s.', package)
-                exit_code += 1
-
-        if args.rsync:
-            try:
-                repository.rsync(target=args.target, delete=args.delete)
-            except KeyboardInterrupt:
-                print()
-                LOGGER.warning('Synchronization aborted by user.')
-                exit_code += 1
-    else:
+    if not args.package:
         for package in repository.packages:
             print(package)
+
+        exit(0)
+
+    exit_code = 0
+
+    for package in args.package:
+        try:
+            repository.add(package, sign=args.sign, clean=args.clean)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Skipped adding package %s.', package)
+            exit_code += 1
+
+    if args.rsync:
+        try:
+            repository.rsync(target=args.target, delete=args.delete)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Synchronization aborted by user.')
+            exit_code += 1
 
     exit(exit_code)
 
