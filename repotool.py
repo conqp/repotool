@@ -214,9 +214,8 @@ class Repository(NamedTuple):
             if other_package.is_other_version_of(package):
                 LOGGER.info('Deleting %s.', other_package)
                 other_package.unlink()
-                signature = pkgsig(other_package)
 
-                if signature.is_file():
+                if (signature := pkgsig(other_package)).is_file():
                     signature.unlink()
                     LOGGER.debug('Deleted %s.', signature)
             else:
