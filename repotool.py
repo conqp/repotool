@@ -33,10 +33,10 @@ CONFIG_FILE = Path('/etc/repotool.conf')
 DESCRIPTION = 'Manage Arch Linux packages and repositories.'
 LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger(__file__)
+MAPPING_FILE = Path('/etc/repotool.json')
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
 PKG_REGEX = '^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$'
-REPO_MAP = Path('/etc/repotool.json')
 
 
 def pkgsig(package: Path) -> Path:
@@ -108,37 +108,43 @@ def get_args() -> Namespace:
         '-c', '--clean', action='store_true',
         help='remove other versions of the package from the repo')
     parser.add_argument(
-        '-s', '--sign', action='store_true',
-        help='sign the packages and repository')
+        '-d', '--delete', action='store_true',
+        help='invoke rsync with delete flag')
+    parser.add_argument(
+        '-f', '--config-file', type=Path, default=CONFIG_FILE, metavar='file',
+        help='config file to read')
+    parser.add_argument(
+        '-m', '--mapping-file', type=Path, default=MAPPING_FILE,
+        metavar='file', help='packge / repo mapping file to read')
     parser.add_argument(
         '-r', '--rsync', action='store_true',
         help='rsync the repository to the configured location')
-    parser.add_argument('-t', '--target', help='the rsync target')
     parser.add_argument(
-        '-d', '--delete', action='store_true',
-        help='invoke rsync with delete flag')
+        '-s', '--sign', action='store_true',
+        help='sign the packages and repository')
+    parser.add_argument('-t', '--target', help='the rsync target')
     parser.add_argument(
         '-v', '--verbose', action='store_true',
         help='enable verbose logging')
     return parser.parse_args()
 
 
-def get_repo_map() -> dict:
+def get_repo_map(path: Path) -> dict:
     """Returns the target repository."""
 
     try:
-        with REPO_MAP.open('r') as file:
+        with path.open('r') as file:
             return load(file)
     except FileNotFoundError:
         return {}
 
 
-def get_memberships() -> dict[str, list[str]]:
+def get_memberships(path: Path) -> dict[str, list[str]]:
     """Returns a mapping of which repositories packages belong to."""
 
     memberships = defaultdict(list)
 
-    for repo, packages in get_repo_map().items():
+    for repo, packages in get_repo_map(path).items():
         for package in packages:
             memberships[package].append(repo)
 
@@ -174,8 +180,12 @@ def main():
     args = get_args()
     basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
     config = ConfigParser()
-    config.read(CONFIG_FILE)
-    memberships = get_memberships()
+
+    if not config.read(args.config_file):
+        LOGGER.warning('Unable to read config file: %s', args.config_file)
+
+    if not (memberships := get_memberships(args.mapping_file)):
+        LOGGER.warning('No repo members configured in: %s', args.mapping_file)
 
     if args.repository and not args.package:
         repository = Repository.from_config(repository, config)
@@ -285,7 +295,7 @@ class Repository(NamedTuple):
         return cls(
             name,
             Path(config.get(name, 'basedir')),
-            config.get(name, 'dbext', '.db.tar.zst'),
+            config.get(name, 'dbext', fallback='.db.tar.zst'),
             config.getboolean(name, 'sign'),
             config.get(name, 'target')
         )
