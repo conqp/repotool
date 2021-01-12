@@ -288,7 +288,7 @@ class Repository(NamedTuple):
     basedir: Path
     dbext: str
     sign: bool
-    target: str
+    target: Optional[str]
 
     @classmethod
     def from_config(cls, name: str, config: ConfigParser) -> Repository:
@@ -297,8 +297,8 @@ class Repository(NamedTuple):
             name,
             Path(config.get(name, 'basedir')),
             config.get(name, 'dbext', fallback='.db.tar.zst'),
-            config.getboolean(name, 'sign'),
-            config.get(name, 'target')
+            config.getboolean(name, 'sign', fallback=True),
+            config.get(name, 'target', fallback=None)
         )
 
     @property
