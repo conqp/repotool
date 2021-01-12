@@ -2,17 +2,20 @@
 """Install script."""
 
 
-from distutils.core import setup
+from setuptools import setup
 
 
 setup(
     name='repotool',
-    version='1.2.7',
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     author='Richard Neumann',
-    author_email='<mail at richard dash neumann period de>',
-    maintainer='Richard Neumann',
-    maintainer_email='<mail at richard dash neumann period de>',
+    author_email='mail@richard-neumann.de',
+    python_requires='>=3.8',
     py_modules=['repotool'],
-    scripts=['repotool'],
-    description=('Arch linux repositry management tool.')
+    entry_points={'console_scripts': ['repotool = repotool:main']},
+    url='https://github.com/conqp/repotool',
+    license='GPLv3',
+    description='Arch linux repositry management tool.',
+    keywords='pacman mirror list mirrorlist optimizer filter'
 )

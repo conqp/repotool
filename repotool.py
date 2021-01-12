@@ -1,28 +1,33 @@
 """Manage Arch Linux repositories."""
 
+from argparse import ArgumentParser
+from configparser import ConfigParser
 from contextlib import suppress
 from functools import lru_cache
-from logging import getLogger
+from logging import DEBUG, INFO, basicConfig, getLogger
 from os import linesep
 from pathlib import Path, PosixPath
 from re import compile  # pylint: disable=W0622
 from shutil import SameFileError, copy2
 from subprocess import check_call, check_output
+from sys import exit    # pylint: disable=W0622
 from typing import NamedTuple
 
 
 __all__ = [
-    'LOGGER',
     'pkgsig',
     'signpkg',
     'pkgpath',
     'vercmp',
+    'main',
     'Version',
     'Package',
     'Repository'
 ]
 
 
+DESCRIPTION = 'Manage Arch Linux packages and repositories.'
+LOG_FORMAT = '[%(levelname)s] %(name)s: %(message)s'
 LOGGER = getLogger(__file__)
 PACKAGELIST = ('/usr/bin/makepkg', '--packagelist')
 PKG_GLOB = '*.pkg.tar*'
@@ -84,6 +89,70 @@ def get_arch_and_compression(path):
     """Returns the architecture and file compression."""
 
     return is_package(path).groups()
+
+
+def get_args():
+    """Parses and returns the command line arguments."""
+
+    parser = ArgumentParser(description=DESCRIPTION)
+    parser.add_argument('repository', help='the target repository')
+    parser.add_argument(
+        'package', type=Package, nargs='*',
+        help='the packages to add to the respository')
+    parser.add_argument(
+        '-c', '--clean', action='store_true',
+        help='remove other versions of the package from the repo')
+    parser.add_argument(
+        '-s', '--sign', action='store_true',
+        help='sign the packages and repository')
+    parser.add_argument(
+        '-r', '--rsync', action='store_true',
+        help='rsync the repository to the configured location')
+    parser.add_argument('-t', '--target', help='the rsync target')
+    parser.add_argument(
+        '-d', '--delete', action='store_true',
+        help='invoke rsync with delete flag')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='enable verbose logging')
+    return parser.parse_args()
+
+
+def main():
+    """Main program."""
+
+    args = get_args()
+    basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
+    config = ConfigParser()
+    config.read('/etc/repotool.conf')
+    repo_config = config[args.repository]
+    repository = Repository.from_config(args.repository, repo_config)
+
+    if not args.package:
+        for package in repository.packages:
+            print(*package)
+
+        exit(0)
+
+    exit_code = 0
+
+    for package in args.package:
+        try:
+            repository.add(package, sign=args.sign, clean=args.clean)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Skipped adding package %s.', package)
+            exit_code += 1
+
+    if args.rsync:
+        try:
+            repository.rsync(target=args.target, delete=args.delete)
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Synchronization aborted by user.')
+            exit_code += 1
+
+    exit(exit_code)
 
 
 class Version(str):
