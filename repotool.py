@@ -103,7 +103,8 @@ def get_args() -> Namespace:
     parser.add_argument(
         'package', type=Package, nargs='*',
         help='the packages to add to the respository')
-    parser.add_argument('-R', '--repository', help='the target repository')
+    parser.add_argument(
+        '-R', '--repository', metavar='name', help='the target repository')
     parser.add_argument(
         '-c', '--clean', action='store_true',
         help='remove other versions of the package from the repo')
