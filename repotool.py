@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
+from collections import defaultdict
 from configparser import ConfigParser
 from contextlib import suppress
 from functools import lru_cache
@@ -13,7 +14,7 @@ from re import Match, fullmatch
 from shutil import SameFileError, copy2
 from subprocess import check_call, check_output
 from sys import exit    # pylint: disable=W0622
-from typing import Iterator, NamedTuple, Optional, Tuple, Union
+from typing import Iterable, Iterator, NamedTuple, Optional, Tuple, Union
 
 
 __all__ = [
@@ -132,35 +133,39 @@ def get_repo_map() -> dict:
         return {}
 
 
-def list_repo(config: ConfigParser, repository: str):
-    """Lists packages in the given repository."""
+def get_memberships() -> dict[str, list[str]]:
+    """Returns a mapping of which repositories packages belong to."""
 
-    repository = Repository.from_config(repository, config[repository])
+    memberships = defaultdict(list)
 
-    for package in repository.packages:
-        print(*package)
+    for repo, packages in get_repo_map().items():
+        for package in packages:
+            memberships[package].append(repo)
+
+    return memberships
 
 
-def add_package(package: Package, config: ConfigParser,
+def get_repositories(package: Package, args: Namespace, config: ConfigParser,
+                     memberships: dict) -> Iterator[Repository]:
+    """Yields target repositories."""
+
+    if args.repository:
+        yield Repository.from_config(args.repository, config)
+        return
+
+    for name in memberships[package.pkgbase]:
+        yield Repository.from_config(name, config)
+
+
+def add_package(package: Package, repositories: Iterable[Repository],
                 args: Namespace) -> bool:
     """Adds a package to a repository."""
 
-    pkgbase = package.pkgbase
-    repo_map = get_repo_map()
+    for repository in repositories:
+        repository.add(package, sign=args.sign, clean=args.clean)
 
-    try:
-        repo_config = config[args.repository or repo_map.get(pkgbase)]
-    except KeyError:
-        LOGGER.error('No repository configured for package: %s', pkgbase)
-        return False
-
-    repository = Repository.from_config(args.repository, repo_config)
-    repository.add(package, sign=args.sign, clean=args.clean)
-
-    if args.rsync:
-        repository.rsync(target=args.target, delete=args.delete)
-
-    return True
+        if args.rsync:
+            repository.rsync(target=args.target, delete=args.delete)
 
 
 def main():
@@ -170,16 +175,27 @@ def main():
     basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
     config = ConfigParser()
     config.read(CONFIG_FILE)
+    memberships = get_memberships()
 
     if args.repository and not args.package:
-        list_repo(config, args.repository)
+        repository = Repository.from_config(repository, config)
+
+        for package in repository.packages:
+            print(*package)
+
         exit(0)
 
     returncode = 0
 
     for package in args.package:
+        repositories = get_repositories(package, args, config, memberships)
+
         try:
-            add_package(package, config, args)
+            add_package(package, repositories, args)
+        except KeyError:
+            LOGGER.error('No repositories configured for package: %s', package)
+            returncode += 1
+            continue
         except KeyboardInterrupt:
             print()
             LOGGER.warning('Aborted by user.')
@@ -266,11 +282,13 @@ class Repository(NamedTuple):
     @classmethod
     def from_config(cls, name: str, config: ConfigParser) -> Repository:
         """Returns the repository from the given name and configuration."""
-        basedir = Path(config['basedir'])
-        dbext = config.get('dbext', '.db.tar.zst')
-        sign = config.getboolean('sign')
-        target = config.get('target')
-        return cls(name, basedir, dbext, sign, target)
+        return cls(
+            name,
+            Path(config.get(name, 'basedir')),
+            config.get(name, 'dbext', '.db.tar.zst'),
+            config.getboolean(name, 'sign'),
+            config.get(name, 'target')
+        )
 
     @property
     def database(self):
