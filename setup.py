@@ -12,7 +12,7 @@ setup(
     author='Richard Neumann',
     author_email='mail@richard-neumann.de',
     python_requires='>=3.8',
-    py_modules=['repotool'],
+    packages=['repotool'],
     entry_points={'console_scripts': ['repotool = repotool:main']},
     url='https://github.com/conqp/repotool',
     license='GPLv3',
