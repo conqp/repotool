@@ -4,8 +4,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from re import Match, fullmatch
-from subprocess import check_call, check_output
-from typing import Tuple
+from subprocess import check_call
 
 from repotool.version import Version
 
@@ -18,20 +17,18 @@ REGEX = '^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$'
 
 
 @lru_cache()
-def get_arch_and_compression(path: Path) -> Tuple[str, str]:
+def get_arch_and_compression(path: Path) -> tuple[str, str]:
     """Returns the architecture and file compression."""
 
     return is_package(path).groups()
 
 
 @lru_cache()
-def get_pkgbase_and_version(path: Path) -> Tuple[str, Version]:
+def get_pkgbase_and_version(path: Path) -> tuple[str, Version]:
     """Returns the pkgbase and version from the given file path."""
 
-    command = ['/usr/bin/pacman', '-Qp', str(path)]
-    text = check_output(command, text=True).strip()
-    pkgbase, version = text.split(maxsplit=1)
-    return (pkgbase, Version(version))
+    pkgbase, version, build = path.name.rsplit('-', maxsplit=2)
+    return (pkgbase, Version(version, int(build)))
 
 
 @lru_cache()

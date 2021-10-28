@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from subprocess import check_output
+from typing import NamedTuple
 
 
 __all__ = ['Version', 'vercmp']
@@ -14,17 +15,29 @@ def vercmp(version: str, other: str) -> int:
     return int(check_output(('/usr/bin/vercmp', version, other), text=True))
 
 
-class Version(str):
+class Version(NamedTuple):
     """A package version."""
+
+    version: str
+    build: int
+
+    def __str__(self):
+        return f'{self.version}-{self.build}'
 
     def __hash__(self):
         return hash((type(self), str(self)))
 
     def __eq__(self, other):
-        return vercmp(str(self), str(other)) == 0
+        return self.version == other.version and self.build == other.build
 
     def __gt__(self, other):
-        return vercmp(str(self), str(other)) == 1
+        if (cmp := vercmp(self.version, other.version)) == 0:
+            return self.build > other.build
+
+        return cmp == 1
 
     def __lt__(self, other):
-        return vercmp(str(self), str(other)) == -1
+        if (cmp := vercmp(self.version, other.version)) == 0:
+            return self.build < other.build
+
+        return cmp == -1
