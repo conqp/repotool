@@ -27,7 +27,7 @@ def get_arch_and_compression(path: Path) -> tuple[str, str]:
 def get_pkgbase_and_version(path: Path) -> tuple[str, Version]:
     """Returns the pkgbase and version from the given file path."""
 
-    pkgbase, version, build = path.name.rsplit('-', maxsplit=2)
+    pkgbase, version, build, _ = path.name.rsplit('-', maxsplit=3)
     return (pkgbase, Version(version, int(build)))
 
 
