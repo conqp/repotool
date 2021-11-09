@@ -82,7 +82,8 @@ def get_args() -> Namespace:
     parser.add_argument(
         '-s', '--sign', action='store_true',
         help='sign the packages and repository')
-    parser.add_argument('-t', '--target', help='the rsync target')
+    parser.add_argument(
+        '-t', '--target', metavar='target', help='the rsync target')
     parser.add_argument(
         '-v', '--verbose', action='store_true',
         help='enable verbose logging')
