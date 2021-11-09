@@ -1,7 +1,7 @@
 """Representation of packages."""
 
 from __future__ import annotations
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from re import Match, fullmatch
 from subprocess import check_call
@@ -16,14 +16,14 @@ GLOB = '*.pkg.tar*'
 REGEX = '^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$'
 
 
-@lru_cache()
+@cache
 def get_arch_and_compression(path: Path) -> tuple[str, str]:
     """Returns the architecture and file compression."""
 
     return is_package(path).groups()
 
 
-@lru_cache()
+@cache
 def get_pkgbase_and_version(path: Path) -> tuple[str, Version]:
     """Returns the pkgbase and version from the given file path."""
 
@@ -31,7 +31,7 @@ def get_pkgbase_and_version(path: Path) -> tuple[str, Version]:
     return (pkgbase, Version(version, int(build)))
 
 
-@lru_cache()
+@cache
 def is_package(string: str) -> Match:
     """Checks whether the path is a package and returns a regex match."""
 
