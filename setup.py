@@ -17,5 +17,5 @@ setup(
     url='https://github.com/conqp/repotool',
     license='GPLv3',
     description='Arch linux repositry management tool.',
-    keywords='pacman mirror list mirrorlist optimizer filter'
+    keywords='arch linux repository management tool'
 )
