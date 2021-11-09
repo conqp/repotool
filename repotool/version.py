@@ -12,7 +12,7 @@ __all__ = ['Version', 'vercmp']
 def vercmp(version: str, other: str) -> int:
     """Compares package versions."""
 
-    return int(check_output(('/usr/bin/vercmp', version, other), text=True))
+    return int(check_output(['/usr/bin/vercmp', version, other], text=True))
 
 
 @total_ordering
