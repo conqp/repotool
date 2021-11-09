@@ -38,9 +38,6 @@ class PackageInfo(NamedTuple):
 class PackageFile(type(Path())):
     """Package meta information."""
 
-    def __getattr__(self, attr: str):
-        return getattr(self.package_info, attr)
-
     def __iter__(self):
         yield from self.package_info
 
@@ -53,6 +50,26 @@ class PackageFile(type(Path())):
     def package_info(self) -> PackageInfo:
         """Returns the respective package info."""
         return get_package_info(self)
+
+    @property
+    def pkgbase(self) -> str:
+        """Returns the pkgbase."""
+        return self.package_info.pkgbase
+
+    @property
+    def version(self) -> Version:
+        """Returns the version."""
+        return self.package_info.version
+
+    @property
+    def arch(self) -> str:
+        """Returns the architecture."""
+        return self.package_info.arch
+
+    @property
+    def compression(self) -> str:
+        """Returns the compression."""
+        return self.package_info.compression
 
     def is_other_version_of(self, other: Version) -> bool:
         """Checks if the other package is considered
