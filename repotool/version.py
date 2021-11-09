@@ -1,6 +1,6 @@
 """Package version representation and operations."""
 
-from functools import lru_cache, total_ordering
+from functools import cache, total_ordering
 from subprocess import check_output
 from typing import NamedTuple
 
@@ -8,7 +8,7 @@ from typing import NamedTuple
 __all__ = ['Version', 'vercmp']
 
 
-@lru_cache()
+@cache
 def vercmp(version: str, other: str) -> int:
     """Compares package versions."""
 
