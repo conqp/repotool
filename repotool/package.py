@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-SUFFIX = r'(x86_64|i686|any)\.pkg\.tar(\.(xz,gz,zst,bz2,lzop))?$'
+SUFFIX = r'(x86_64|i686|any)\.pkg\.tar(\.(xz|gz|zst|bz2|lzop))?$'
 REGEX = r'^.+-' + SUFFIX
 
 
