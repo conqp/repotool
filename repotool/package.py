@@ -93,7 +93,7 @@ def get_package_info(path: Path) -> PackageInfo:
 
     pkgbase, version, build, arch_suffix = path.name.rsplit('-', maxsplit=3)
     version = Version(version, int(build))
-    arch, compression = fullmatch(SUFFIX, arch_suffix)
+    arch, compression = fullmatch(SUFFIX, arch_suffix).groups()
     return PackageInfo(pkgbase, version, arch, compression)
 
 
