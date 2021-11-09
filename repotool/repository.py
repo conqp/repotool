@@ -82,15 +82,16 @@ class Repository(NamedTuple):
     def isolate(self, package: PackageFile) -> None:
         """Removes other versions of the given package."""
         for other_package in self.packages_for_base(package.pkgbase):
-            if other_package.is_other_version_of(package):
-                LOGGER.info('Deleting %s.', other_package)
-                other_package.unlink()
-
-                if (sigfile := signature(other_package)).is_file():
-                    sigfile.unlink()
-                    LOGGER.debug('Deleted %s.', sigfile)
-            else:
+            if not other_package.is_other_version_of(package):
                 LOGGER.debug('Keeping %s.', other_package)
+                continue
+
+            LOGGER.info('Deleting %s.', other_package)
+            other_package.unlink()
+
+            if (sigfile := signature(other_package)).is_file():
+                sigfile.unlink()
+                LOGGER.debug('Deleted %s.', sigfile)
 
     def add(self, package: PackageFile, *, sign: bool = False,
             clean: bool = False) -> None:
