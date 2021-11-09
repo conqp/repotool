@@ -33,7 +33,7 @@ def get_repo_map(path: Path) -> dict:
         return {}
 
 
-def get_memberships(path: Path) -> dict[str, list[str]]:
+def get_memberships(path: Path) -> defaultdict[str, list[str]]:
     """Returns a mapping of which repositories packages belong to."""
 
     memberships = defaultdict(list)
