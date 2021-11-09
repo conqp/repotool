@@ -22,8 +22,8 @@ __all__ = [
 ]
 
 
-SUFFIX = r'-(x86_64|i686|any)\.pkg\.tar(\.(xz,gz,zst,bz2,lzop))?$'
-REGEX = r'^.+' + SUFFIX
+SUFFIX = r'(x86_64|i686|any)\.pkg\.tar(\.(xz,gz,zst,bz2,lzop))?$'
+REGEX = r'^.+-' + SUFFIX
 
 
 class PackageInfo(NamedTuple):
@@ -93,7 +93,7 @@ def get_package_info(path: Path) -> PackageInfo:
 
     pkgbase, version, build, arch_suffix = path.name.rsplit('-', maxsplit=3)
     version = Version(version, int(build))
-    arch, compression = fullmatch(REGEX, arch_suffix)
+    arch, compression = fullmatch(SUFFIX, arch_suffix)
     return PackageInfo(pkgbase, version, arch, compression)
 
 

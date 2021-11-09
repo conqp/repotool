@@ -75,7 +75,7 @@ class Repository(NamedTuple):
 
     def packages_for_base(self, pkgbase: str) -> Iterator[PackageFile]:
         """Yields package files with the respective package information."""
-        for path in self.basedir.glob(f'{pkgbase}{SUFFIX}'):
+        for path in self.basedir.glob(f'{pkgbase}-{SUFFIX}'):
             if is_package(path) is not None:
                 yield PackageFile(path)
 
