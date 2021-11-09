@@ -29,6 +29,7 @@ def get_repo_map(path: Path) -> dict:
         with path.open('r') as file:
             return load(file)
     except FileNotFoundError:
+        LOGGER.warning('Repository map not found: %s', path)
         return {}
 
 
