@@ -9,8 +9,9 @@ from subprocess import check_call
 from typing import Iterator, NamedTuple, Optional
 
 from repotool.logging import LOGGER
-from repotool.package import GLOB
-from repotool.package import Package
+from repotool.package import REGEX
+from repotool.package import SUFFIX
+from repotool.package import PackageFile
 from repotool.package import is_package
 from repotool.package import sign as sign_package
 from repotool.package import signature
@@ -40,23 +41,23 @@ class Repository(NamedTuple):
         )
 
     @property
-    def database(self):
+    def database(self) -> str:
         """Returns the database file name."""
         return self.name + self.dbext
 
     @property
-    def packages(self):
+    def packages(self) -> Iterator[PackageFile]:
         """Yields packages in the repository."""
-        for path in self.basedir.glob(GLOB):
+        for path in self.basedir.glob(REGEX):
             if is_package(path) is not None:
-                yield Package(path)
+                yield PackageFile(path)
 
     @property
-    def pkgbases(self):
+    def pkgbases(self) -> set[str]:
         """Yields distinct package names."""
         return {pkg_info.pkgbase for pkg_info in self.packages}
 
-    def _copy_pkg(self, package: Package, sign: bool) -> None:
+    def _copy_pkg(self, package: PackageFile, sign: bool) -> None:
         """Copies the package to the repository's base dir."""
         sigfile = signature(package)
 
@@ -72,13 +73,13 @@ class Repository(NamedTuple):
         with suppress(SameFileError):
             copy2(sigfile, self.basedir)
 
-    def packages_for_base(self, pkgbase: str) -> Iterator[Package]:
+    def packages_for_base(self, pkgbase: str) -> Iterator[PackageFile]:
         """Yields package files with the respective package information."""
-        for path in self.basedir.glob(f'{pkgbase}-{GLOB}'):
+        for path in self.basedir.glob(f'{pkgbase}{SUFFIX}'):
             if is_package(path) is not None:
-                yield Package(path)
+                yield PackageFile(path)
 
-    def isolate(self, package: Package) -> None:
+    def isolate(self, package: PackageFile) -> None:
         """Removes other versions of the given package."""
         for other_package in self.packages_for_base(package.pkgbase):
             if other_package.is_other_version_of(package):
@@ -91,7 +92,7 @@ class Repository(NamedTuple):
             else:
                 LOGGER.debug('Keeping %s.', other_package)
 
-    def add(self, package: Package, *, sign: bool = False,
+    def add(self, package: PackageFile, *, sign: bool = False,
             clean: bool = False) -> None:
         """Adds the respective pacakge to the repo."""
         sign = sign or self.sign
