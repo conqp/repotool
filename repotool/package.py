@@ -15,6 +15,7 @@ __all__ = [
     'SUFFIX',
     'REGEX',
     'PackageFile',
+    'PackageInfo',
     'is_package',
     'sign',
     'signature'
