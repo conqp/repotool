@@ -6,11 +6,10 @@ from configparser import ConfigParser
 from json import load
 from logging import DEBUG, INFO, basicConfig
 from pathlib import Path
-from sys import exit    # pylint: disable=W0622
-from typing import Iterable, Iterator
+from typing import Iterable
 
 from repotool.logging import LOG_FORMAT, LOGGER
-from repotool.package import Package
+from repotool.package import PackageFile
 from repotool.repository import Repository
 
 
@@ -45,19 +44,7 @@ def get_memberships(path: Path) -> defaultdict[str, list[str]]:
     return memberships
 
 
-def get_repositories(package: Package, args: Namespace, config: ConfigParser,
-                     memberships: dict) -> Iterator[Repository]:
-    """Yields target repositories."""
-
-    if args.repository:
-        yield Repository.from_config(args.repository, config)
-        return
-
-    for name in memberships[package.pkgbase]:
-        yield Repository.from_config(name, config)
-
-
-def add_package(package: Package, repositories: Iterable[Repository],
+def add_package(package: PackageFile, repositories: Iterable[Repository],
                 args: Namespace) -> bool:
     """Adds a package to a repository."""
 
@@ -73,7 +60,7 @@ def get_args() -> Namespace:
 
     parser = ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
-        'package', type=Package, nargs='*',
+        'package', type=PackageFile, nargs='*',
         help='the packages to add to the respository')
     parser.add_argument(
         '-R', '--repository', metavar='name', help='the target repository')
@@ -102,31 +89,30 @@ def get_args() -> Namespace:
     return parser.parse_args()
 
 
-def main():
-    """Main program."""
+def list_repo(repository: Repository) -> None:
+    """Lists the packages of the given repository."""
 
-    args = get_args()
-    basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
-    config = ConfigParser()
+    for package in repository.packages:
+        print(*package)
 
-    if not config.read(args.config_file):
-        LOGGER.warning('Unable to read config file: %s', args.config_file)
+
+def add_packages(args: Namespace, config: ConfigParser) -> int:
+    """Adds packages to a repo."""
+
+    returncode = 0
 
     if not (memberships := get_memberships(args.mapping_file)):
         LOGGER.warning('No repo members configured in: %s', args.mapping_file)
 
-    if args.repository and not args.package:
-        repository = Repository.from_config(repository, config)
-
-        for package in repository.packages:
-            print(*package)
-
-        exit(0)
-
-    returncode = 0
+    if args.repository:
+        repositories = [Repository.from_config(args.repository, config)]
 
     for package in args.package:
-        repositories = get_repositories(package, args, config, memberships)
+        if not args.repository:
+            repositories = {
+                Repository.from_config(name, config)
+                for name in memberships[package.pkgbase]
+            }
 
         try:
             add_package(package, repositories, args)
@@ -140,4 +126,21 @@ def main():
             returncode += 1
             continue
 
-    exit(returncode)
+    return returncode
+
+
+def main() -> int:
+    """Main program."""
+
+    args = get_args()
+    basicConfig(level=DEBUG if args.verbose else INFO, format=LOG_FORMAT)
+    config = ConfigParser()
+
+    if not config.read(args.config_file):
+        LOGGER.warning('Unable to read config file: %s', args.config_file)
+
+    if args.repository and not args.package:
+        list_repo(Repository.from_config(args.repository, config))
+        return 0
+
+    return add_packages(args, config)
