@@ -13,7 +13,7 @@ __all__ = ['GLOB', 'REGEX', 'Package', 'is_package', 'sign', 'signature']
 
 
 GLOB = '*.pkg.tar*'
-REGEX = '^.*-(x86_64|i686|any)\\.pkg\\.tar(\\.[a-z]{2,3})?$'
+REGEX = r'^.*-(x86_64|i686|any)\.pkg\.tar(\.(xz,gz,zst,bz2,lzop))?$'
 
 
 @cache
