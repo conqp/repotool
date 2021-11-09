@@ -25,9 +25,6 @@ class Version(NamedTuple):
     def __str__(self):
         return f'{self.version}-{self.build}'
 
-    def __hash__(self):
-        return hash((type(self), str(self)))
-
     def __eq__(self, other):
         return self.version == other.version and self.build == other.build
 
