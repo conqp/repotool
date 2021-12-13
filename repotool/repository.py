@@ -9,8 +9,6 @@ from subprocess import check_call
 from typing import Iterator, NamedTuple, Optional
 
 from repotool.logging import LOGGER
-from repotool.package import REGEX
-from repotool.package import SUFFIX
 from repotool.package import PackageFile
 from repotool.package import is_package
 from repotool.package import sign as sign_package
@@ -48,9 +46,7 @@ class Repository(NamedTuple):
     @property
     def packages(self) -> Iterator[PackageFile]:
         """Yields packages in the repository."""
-        for path in self.basedir.glob(REGEX):
-            if is_package(path) is not None:
-                yield PackageFile(path)
+        return map(PackageFile, filter(is_package, self.basedir.glob('*')))
 
     @property
     def pkgbases(self) -> set[str]:
@@ -75,9 +71,7 @@ class Repository(NamedTuple):
 
     def packages_for_base(self, pkgbase: str) -> Iterator[PackageFile]:
         """Yields package files with the respective package information."""
-        for path in self.basedir.glob(f'{pkgbase}-{SUFFIX}'):
-            if is_package(path) is not None:
-                yield PackageFile(path)
+        return filter(lambda pkg: pkg.pkgbase == pkgbase, self.packages)
 
     def isolate(self, package: PackageFile) -> None:
         """Removes other versions of the given package."""
