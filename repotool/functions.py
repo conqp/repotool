@@ -181,7 +181,7 @@ def main() -> int:
         args.package, args.repository, args.mapping_file, config
     )
     error = add_packages(
-        args.package, repositories, sign=args.sign, clean=args.clent
+        args.package, repositories, sign=args.sign, clean=args.clean
     )
 
     if args.rsync:
