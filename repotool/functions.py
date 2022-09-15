@@ -173,7 +173,7 @@ def main() -> int:
     if not config.read(args.config_file):
         LOGGER.warning('Unable to read config file: %s', args.config_file)
 
-    if args.repository and not args.package:
+    if args.repository and not args.package and not args.rsync:
         list_repo(Repository.from_config(args.repository, config))
         return 0
 
