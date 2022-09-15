@@ -55,10 +55,10 @@ class Repository(NamedTuple):
 
     def _copy_pkg(self, package: PackageFile, sign: bool) -> None:
         """Copies the package to the repository's base dir."""
-        sigfile = signature(package)
+        sig_file = signature(package)
 
         if sign:
-            if sigfile.is_file():
+            if sig_file.is_file():
                 LOGGER.warning('Package is already signed.')
 
             sign_package(package)
@@ -67,7 +67,7 @@ class Repository(NamedTuple):
             copy2(package, self.basedir)
 
         with suppress(SameFileError):
-            copy2(sigfile, self.basedir)
+            copy2(sig_file, self.basedir)
 
     def packages_for_base(self, pkgbase: str) -> Iterator[PackageFile]:
         """Yields package files with the respective package information."""
@@ -83,9 +83,9 @@ class Repository(NamedTuple):
             LOGGER.info('Deleting %s.', other_package)
             other_package.unlink()
 
-            if (sigfile := signature(other_package)).is_file():
-                sigfile.unlink()
-                LOGGER.debug('Deleted %s.', sigfile)
+            if (sig_file := signature(other_package)).is_file():
+                sig_file.unlink()
+                LOGGER.debug('Deleted %s.', sig_file)
 
     def add(
             self,
@@ -98,12 +98,12 @@ class Repository(NamedTuple):
         sign = sign or self.sign
         self._copy_pkg(package, sign)
 
-        repoadd = ['/usr/bin/repo-add', self.database, package.name]
+        repo_add = ['/usr/bin/repo-add', self.database, package.name]
 
         if sign:
-            repoadd.append('--sign')
+            repo_add.append('--sign')
 
-        check_call(repoadd, cwd=self.basedir)
+        check_call(repo_add, cwd=self.basedir)
 
         if clean:
             self.isolate(package)
