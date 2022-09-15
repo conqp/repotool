@@ -87,9 +87,14 @@ class Repository(NamedTuple):
                 sigfile.unlink()
                 LOGGER.debug('Deleted %s.', sigfile)
 
-    def add(self, package: PackageFile, *, sign: bool = False,
-            clean: bool = False) -> None:
-        """Adds the respective pacakge to the repo."""
+    def add(
+            self,
+            package: PackageFile,
+            *,
+            sign: bool = False,
+            clean: bool = False
+    ) -> None:
+        """Adds the respective package to the repo."""
         sign = sign or self.sign
         self._copy_pkg(package, sign)
 
