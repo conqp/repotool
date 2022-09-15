@@ -43,7 +43,7 @@ class PackageFile(type(Path())):
 
     @property
     def info(self):
-        """Returns the pacakge base and version."""
+        """Returns the package base and version."""
         return f'{self.pkgbase} {self.version}'
 
     @property
@@ -53,7 +53,7 @@ class PackageFile(type(Path())):
 
     @property
     def pkgbase(self) -> str:
-        """Returns the pkgbase."""
+        """Returns the package base name."""
         return self.package_info.pkgbase
 
     @property
@@ -71,9 +71,9 @@ class PackageFile(type(Path())):
         """Returns the compression."""
         return self.package_info.compression
 
-    def is_other_version_of(self, other: Version) -> bool:
+    def is_other_version_of(self, other: PackageFile) -> bool:
         """Checks if the other package is considered
-        another version of this pacakge.
+        another version of this package.
         """
         if self.pkgbase != other.pkgbase:
             return False
@@ -105,7 +105,7 @@ def is_package(package: PackageFile) -> Match:
 
 
 def sign(package: PackageFile) -> int:
-    """Signs the respective pacakge."""
+    """Signs the respective package."""
 
     return check_call([
         '/usr/bin/gpg', '--output', str(signature(package)), '--detach-sign',
