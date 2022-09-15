@@ -33,7 +33,7 @@ def get_repo_map(path: Path) -> dict:
 
 
 def get_memberships(path: Path) -> defaultdict[str, list[str]]:
-    """Returns a mapping of which repositories packages belong to."""
+    """Return a mapping of which repositories which packages belong to."""
 
     memberships = defaultdict(list)
 
@@ -44,50 +44,72 @@ def get_memberships(path: Path) -> defaultdict[str, list[str]]:
     return memberships
 
 
-def add_package(package: PackageFile, repositories: Iterable[Repository],
-                args: Namespace) -> bool:
-    """Adds a package to a repository."""
+def add_package(
+        package: PackageFile,
+        repositories: Iterable[Repository],
+        sign: bool,
+        clean: bool
+) -> None:
+    """Add a package to repositories."""
 
     for repository in repositories:
-        repository.add(package, sign=args.sign, clean=args.clean)
-
-        if args.rsync:
-            repository.rsync(target=args.target, delete=args.delete)
+        repository.add(package, sign=sign, clean=clean)
 
 
-def get_args() -> Namespace:
-    """Parses and returns the command line arguments."""
+def add_packages(
+        packages: Iterable[PackageFile],
+        repositories: Iterable[Repository],
+        sign: bool,
+        clean: bool
+) -> int:
+    """Adds packages to a repo."""
 
-    parser = ArgumentParser(description=DESCRIPTION)
-    parser.add_argument(
-        'package', type=PackageFile, nargs='*',
-        help='the packages to add to the respository')
-    parser.add_argument(
-        '-R', '--repository', metavar='name', help='the target repository')
-    parser.add_argument(
-        '-c', '--clean', action='store_true',
-        help='remove other versions of the package from the repo')
-    parser.add_argument(
-        '-d', '--delete', action='store_true',
-        help='invoke rsync with delete flag')
-    parser.add_argument(
-        '-f', '--config-file', type=Path, default=CONFIG_FILE, metavar='file',
-        help='config file to read')
-    parser.add_argument(
-        '-m', '--mapping-file', type=Path, default=MAPPING_FILE,
-        metavar='file', help='packge / repo mapping file to read')
-    parser.add_argument(
-        '-r', '--rsync', action='store_true',
-        help='rsync the repository to the configured location')
-    parser.add_argument(
-        '-s', '--sign', action='store_true',
-        help='sign the packages and repository')
-    parser.add_argument(
-        '-t', '--target', metavar='target', help='the rsync target')
-    parser.add_argument(
-        '-v', '--verbose', action='store_true',
-        help='enable verbose logging')
-    return parser.parse_args()
+    errors = 0
+
+    for package in packages:
+        try:
+            add_package(package, repositories, sign=sign, clean=clean)
+        except KeyError:
+            LOGGER.error('No repositories configured for package: %s', package)
+            errors += 1
+        except KeyboardInterrupt:
+            print()
+            LOGGER.warning('Aborted by user.')
+            errors += 1
+
+    return errors
+
+
+def get_repositories(
+        packages: Iterable[PackageFile],
+        repository: str | None,
+        mapping_file: Path,
+        config: ConfigParser
+) -> set[Repository]:
+    """Return a set of repositories."""
+
+    if repository:
+        return {Repository.from_config(repository, config)}
+
+    if not (memberships := get_memberships(mapping_file)):
+        LOGGER.warning('No repo members configured in: %s', mapping_file)
+
+    return {
+        Repository.from_config(name, config)
+        for package in packages
+        for name in memberships[package.pkgbase]
+    }
+
+
+def rsync_repos(
+        repositories: Iterable[Repository],
+        target: str,
+        delete: bool
+) -> None:
+    """Rsync the given repositories."""
+
+    for repository in repositories:
+        repository.rsync(target=target, delete=delete)
 
 
 def list_repo(repository: Repository) -> None:
@@ -97,37 +119,48 @@ def list_repo(repository: Repository) -> None:
         print(*package)
 
 
-def add_packages(args: Namespace, config: ConfigParser) -> int:
-    """Adds packages to a repo."""
+def get_args() -> Namespace:
+    """Parses and returns the command line arguments."""
 
-    returncode = 0
-
-    if not (memberships := get_memberships(args.mapping_file)):
-        LOGGER.warning('No repo members configured in: %s', args.mapping_file)
-
-    if args.repository:
-        repositories = [Repository.from_config(args.repository, config)]
-
-    for package in args.package:
-        if not args.repository:
-            repositories = {
-                Repository.from_config(name, config)
-                for name in memberships[package.pkgbase]
-            }
-
-        try:
-            add_package(package, repositories, args)
-        except KeyError:
-            LOGGER.error('No repositories configured for package: %s', package)
-            returncode += 1
-            continue
-        except KeyboardInterrupt:
-            print()
-            LOGGER.warning('Aborted by user.')
-            returncode += 1
-            continue
-
-    return returncode
+    parser = ArgumentParser(description=DESCRIPTION)
+    parser.add_argument(
+        'package', type=PackageFile, nargs='*',
+        help='the packages to add to the repository'
+    )
+    parser.add_argument(
+        '-R', '--repository', metavar='name', help='the target repository'
+    )
+    parser.add_argument(
+        '-c', '--clean', action='store_true',
+        help='remove other versions of the package from the repo'
+    )
+    parser.add_argument(
+        '-d', '--delete', action='store_true',
+        help='invoke rsync with delete flag')
+    parser.add_argument(
+        '-f', '--config-file', type=Path, default=CONFIG_FILE, metavar='file',
+        help='config file to read'
+    )
+    parser.add_argument(
+        '-m', '--mapping-file', type=Path, default=MAPPING_FILE,
+        metavar='file', help='package / repo mapping file to read'
+    )
+    parser.add_argument(
+        '-r', '--rsync', action='store_true',
+        help='rsync the repository to the configured location'
+    )
+    parser.add_argument(
+        '-s', '--sign', action='store_true',
+        help='sign the packages and repository'
+    )
+    parser.add_argument(
+        '-t', '--target', metavar='target', help='the rsync target'
+    )
+    parser.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='enable verbose logging'
+    )
+    return parser.parse_args()
 
 
 def main() -> int:
@@ -144,4 +177,14 @@ def main() -> int:
         list_repo(Repository.from_config(args.repository, config))
         return 0
 
-    return add_packages(args, config)
+    repositories = get_repositories(
+        args.package, args.repository, args.mapping_file, config
+    )
+    error = add_packages(
+        args.package, repositories, sign=args.sign, clean=args.clent
+    )
+
+    if args.rsync:
+        rsync_repos(repositories, args.target, args.delete)
+
+    return error
