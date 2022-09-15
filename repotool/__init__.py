@@ -1,6 +1,6 @@
 """Pacman repository management tool."""
 
-from repotool.functions import main
+from repotool.cli import main
 from repotool.package import PackageFile, PackageInfo
 from repotool.version import Version
 from repotool.repository import Repository
