@@ -5,14 +5,14 @@ from subprocess import check_output
 from typing import NamedTuple
 
 
-__all__ = ['Version', 'vercmp']
+__all__ = ["Version", "vercmp"]
 
 
 @cache
 def vercmp(version: str, other: str) -> int:
     """Compares package versions."""
 
-    return int(check_output(['/usr/bin/vercmp', version, other], text=True))
+    return int(check_output(["/usr/bin/vercmp", version, other], text=True))
 
 
 @total_ordering
@@ -23,7 +23,7 @@ class Version(NamedTuple):
     build: int
 
     def __str__(self):
-        return f'{self.version}-{self.build}'
+        return f"{self.version}-{self.build}"
 
     def __eq__(self, other):
         return self.version == other.version and self.build == other.build

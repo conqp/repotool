@@ -11,19 +11,19 @@ from repotool.version import Version
 
 
 __all__ = [
-    'REGEX',
-    'SUFFIX',
-    'REGEX',
-    'PackageFile',
-    'PackageInfo',
-    'is_package',
-    'sign',
-    'signature'
+    "REGEX",
+    "SUFFIX",
+    "REGEX",
+    "PackageFile",
+    "PackageInfo",
+    "is_package",
+    "sign",
+    "signature",
 ]
 
 
-SUFFIX = r'(x86_64|i686|any)\.pkg\.tar(?:\.(xz|gz|zst|bz2|lzop))?$'
-REGEX = r'^.+-' + SUFFIX
+SUFFIX = r"(x86_64|i686|any)\.pkg\.tar(?:\.(xz|gz|zst|bz2|lzop))?$"
+REGEX = r"^.+-" + SUFFIX
 
 
 class PackageInfo(NamedTuple):
@@ -44,7 +44,7 @@ class PackageFile(type(Path())):
     @property
     def info(self):
         """Returns the package base and version."""
-        return f'{self.pkgbase} {self.version}'
+        return f"{self.pkgbase} {self.version}"
 
     @property
     def package_info(self) -> PackageInfo:
@@ -91,7 +91,7 @@ class PackageFile(type(Path())):
 def get_package_info(path: Path) -> PackageInfo:
     """Returns the package information from the given file path."""
 
-    pkgbase, version, build, arch_suffix = path.name.rsplit('-', maxsplit=3)
+    pkgbase, version, build, arch_suffix = path.name.rsplit("-", maxsplit=3)
     version = Version(version, int(build))
     arch, compression = fullmatch(SUFFIX, arch_suffix).groups()
     return PackageInfo(pkgbase, version, arch, compression)
@@ -107,13 +107,18 @@ def is_package(package: PackageFile) -> Match:
 def sign(package: PackageFile) -> int:
     """Signs the respective package."""
 
-    return check_call([
-        '/usr/bin/gpg', '--output', str(signature(package)), '--detach-sign',
-        str(package)
-    ])
+    return check_call(
+        [
+            "/usr/bin/gpg",
+            "--output",
+            str(signature(package)),
+            "--detach-sign",
+            str(package),
+        ]
+    )
 
 
 def signature(package: PackageFile) -> Path:
     """Returns the path to the package's signature."""
 
-    return Path(str(package) + '.sig')
+    return Path(str(package) + ".sig")

@@ -11,7 +11,7 @@ from repotool.package import PackageFile
 from repotool.repository import Repository
 
 
-__all__ = ['list_repo', 'get_repositories', 'add_packages', 'rsync_repos']
+__all__ = ["list_repo", "get_repositories", "add_packages", "rsync_repos"]
 
 
 def list_repo(repository: Repository) -> None:
@@ -22,10 +22,10 @@ def list_repo(repository: Repository) -> None:
 
 
 def get_repositories(
-        packages: Iterable[PackageFile],
-        repository: str | None,
-        mapping_file: Path,
-        config: ConfigParser
+    packages: Iterable[PackageFile],
+    repository: str | None,
+    mapping_file: Path,
+    config: ConfigParser,
 ) -> set[Repository]:
     """Return a set of repositories."""
 
@@ -33,7 +33,7 @@ def get_repositories(
         return {Repository.from_config(repository, config)}
 
     if not (memberships := get_memberships(mapping_file)):
-        LOGGER.warning('No repo members configured in: %s', mapping_file)
+        LOGGER.warning("No repo members configured in: %s", mapping_file)
 
     return {
         Repository.from_config(name, config)
@@ -43,10 +43,10 @@ def get_repositories(
 
 
 def add_packages(
-        packages: Iterable[PackageFile],
-        repositories: Iterable[Repository],
-        sign: bool,
-        clean: bool
+    packages: Iterable[PackageFile],
+    repositories: Iterable[Repository],
+    sign: bool,
+    clean: bool,
 ) -> int:
     """Adds packages to a repo."""
 
@@ -56,21 +56,17 @@ def add_packages(
         try:
             add_package(package, repositories, sign=sign, clean=clean)
         except KeyError:
-            LOGGER.error('No repositories configured for package: %s', package)
+            LOGGER.error("No repositories configured for package: %s", package)
             errors += 1
         except KeyboardInterrupt:
             print()
-            LOGGER.warning('Aborted by user.')
+            LOGGER.warning("Aborted by user.")
             errors += 1
 
     return errors
 
 
-def rsync_repos(
-        repositories: Iterable[Repository],
-        target: str,
-        delete: bool
-) -> None:
+def rsync_repos(repositories: Iterable[Repository], target: str, delete: bool) -> None:
     """Rsync the given repositories."""
 
     for repository in repositories:
@@ -78,10 +74,7 @@ def rsync_repos(
 
 
 def add_package(
-        package: PackageFile,
-        repositories: Iterable[Repository],
-        sign: bool,
-        clean: bool
+    package: PackageFile, repositories: Iterable[Repository], sign: bool, clean: bool
 ) -> None:
     """Add a package to repositories."""
 
@@ -105,8 +98,8 @@ def get_repo_map(path: Path) -> dict:
     """Returns the target repository."""
 
     try:
-        with path.open('r') as file:
+        with path.open("r") as file:
             return load(file)
     except FileNotFoundError:
-        LOGGER.warning('Repository map not found: %s', path)
+        LOGGER.warning("Repository map not found: %s", path)
         return {}

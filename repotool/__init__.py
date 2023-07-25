@@ -6,4 +6,4 @@ from repotool.version import Version
 from repotool.repository import Repository
 
 
-__all__ = ['PackageFile', 'PackageInfo', 'Repository', 'Version', 'main']
+__all__ = ["PackageFile", "PackageInfo", "Repository", "Version", "main"]

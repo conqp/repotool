@@ -15,7 +15,7 @@ from repotool.package import sign as sign_package
 from repotool.package import signature
 
 
-__all__ = ['Repository']
+__all__ = ["Repository"]
 
 
 class Repository(NamedTuple):
@@ -32,10 +32,10 @@ class Repository(NamedTuple):
         """Returns the repository from the given name and configuration."""
         return cls(
             name,
-            Path(config.get(name, 'basedir')),
-            config.get(name, 'dbext', fallback='.db.tar.zst'),
-            config.getboolean(name, 'sign', fallback=True),
-            config.get(name, 'target', fallback=None)
+            Path(config.get(name, "basedir")),
+            config.get(name, "dbext", fallback=".db.tar.zst"),
+            config.getboolean(name, "sign", fallback=True),
+            config.get(name, "target", fallback=None),
         )
 
     @property
@@ -46,7 +46,7 @@ class Repository(NamedTuple):
     @property
     def packages(self) -> Iterator[PackageFile]:
         """Yields packages in the repository."""
-        return map(PackageFile, filter(is_package, self.basedir.glob('*')))
+        return map(PackageFile, filter(is_package, self.basedir.glob("*")))
 
     @property
     def pkgbases(self) -> set[str]:
@@ -59,7 +59,7 @@ class Repository(NamedTuple):
 
         if sign:
             if sig_file.is_file():
-                LOGGER.warning('Package is already signed.')
+                LOGGER.warning("Package is already signed.")
 
             sign_package(package)
 
@@ -77,52 +77,47 @@ class Repository(NamedTuple):
         """Removes other versions of the given package."""
         for other_package in self.packages_for_base(package.pkgbase):
             if not other_package.is_other_version_of(package):
-                LOGGER.debug('Keeping %s.', other_package)
+                LOGGER.debug("Keeping %s.", other_package)
                 continue
 
-            LOGGER.info('Deleting %s.', other_package)
+            LOGGER.info("Deleting %s.", other_package)
             other_package.unlink()
 
             if (sig_file := signature(other_package)).is_file():
                 sig_file.unlink()
-                LOGGER.debug('Deleted %s.', sig_file)
+                LOGGER.debug("Deleted %s.", sig_file)
 
     def add(
-            self,
-            package: PackageFile,
-            *,
-            sign: bool = False,
-            clean: bool = False
+        self, package: PackageFile, *, sign: bool = False, clean: bool = False
     ) -> None:
         """Adds the respective package to the repo."""
         sign = sign or self.sign
         self._copy_pkg(package, sign)
 
-        repo_add = ['/usr/bin/repo-add', self.database, package.name]
+        repo_add = ["/usr/bin/repo-add", self.database, package.name]
 
         if sign:
-            repo_add.append('--sign')
+            repo_add.append("--sign")
 
         check_call(repo_add, cwd=self.basedir)
 
         if clean:
             self.isolate(package)
 
-    def rsync(self, target: Optional[str] = None, *,
-              delete: bool = False) -> int:
+    def rsync(self, target: Optional[str] = None, *, delete: bool = False) -> int:
         """Synchronizes the repository to the target."""
         target = self.target if target is None else target
 
         if target is None:
-            LOGGER.error('No target specified.')
+            LOGGER.error("No target specified.")
             return False
 
-        command = ['/usr/bin/rsync', '-auv']
+        command = ["/usr/bin/rsync", "-auv"]
         source = str(self.basedir)
 
         if delete:
-            command.append('--delete')
-            source = source if source.endswith('/') else source + '/'
+            command.append("--delete")
+            source = source if source.endswith("/") else source + "/"
 
         command += [source, target]
         return check_call(command, cwd=self.basedir)
